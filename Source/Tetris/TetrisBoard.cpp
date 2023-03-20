@@ -27,7 +27,47 @@ ATetrisBoard::ATetrisBoard()
 			MeshGrid[i]->SetupAttachment(MeshGrid[0]);
 		}
 	}
+
+	SetupOutlineGrid();
 	
+}
+
+void ATetrisBoard::SetupOutlineGrid() {
+	int i;
+	int x = -2;
+	int y = -1;
+
+	//Bottom row
+	for (i = 0; i < (TetrisConstants::Width + 2); i++) {
+		x++;
+		MakeOutlineTile(i, FVector(x, y, 0));
+	}
+
+	//Right column
+	for (; i < (TetrisConstants::Width + TetrisConstants::Height + 3); i++) {
+		y++;
+		MakeOutlineTile(i, FVector(x, y, 0));
+	}
+
+	//Top row
+	for (; i < (TetrisConstants::Width * 2 + TetrisConstants::Height + 4); i++) {
+		x--;
+		MakeOutlineTile(i, FVector(x, y, 0));
+	}
+
+	//Left column
+	for (; i < (2 * (TetrisConstants::Width + TetrisConstants::Height) + 4); i++) {
+		y--; 
+		MakeOutlineTile(i, FVector(x, y, 0));
+	}
+}
+
+void ATetrisBoard::MakeOutlineTile(int index, FVector pos) {
+	FString s = FString("OutlineTile_");
+	s.AppendInt(index);
+	OutlineMeshGrid[index] = CreateDefaultSubobject<UStaticMeshComponent>(FName(*s));
+	OutlineMeshGrid[index]->SetRelativeLocation(pos * 100.0f);
+	OutlineMeshGrid[index]->SetupAttachment(MeshGrid[0]);
 }
 
 // Called when the game starts or when spawned
@@ -39,6 +79,40 @@ void ATetrisBoard::BeginPlay()
 		MeshGrid[i]->SetStaticMesh(StaticMesh);
 	}
 
+	for (int i = 0; i < (2 * (TetrisConstants::Width + TetrisConstants::Height) + 4); i++) {
+		if (OutlineMeshGrid[i] == nullptr) { break; }
+		OutlineMeshGrid[i]->SetStaticMesh(StaticMesh);
+		OutlineMeshGrid[i]->SetMaterial(0, OutlineMaterial);
+	}
+	
+	TrySpawnBlock(TetrisConstants::TileType::J);
+	DrawGrid();
+
+	//TimerRepetitions = 0;
+	//GetWorldTimerManager().SetTimer(GameplayTimerHandle, this, &ATetrisBoard::TestTimerFunction, 0.25f, true, 0.25f);
+}
+
+//TEST FUNCTION DELETE LATER
+void ATetrisBoard::TestTimerFunction() {
+	bool result;
+	switch (TimerRepetitions) {
+		case 0:
+			result = TryMovingRight();
+			TimerRepetitions++;
+			break;
+		case 1:
+			result = TryMovingLeft();
+			TimerRepetitions++;
+			break;
+		case 2:
+			result = TryLoweringBlock();
+			TimerRepetitions = 0;
+			break;
+	}
+	if (!result) {
+		LockHoveringTiles();
+		GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
+	}
 	DrawGrid();
 }
 
@@ -52,8 +126,7 @@ void ATetrisBoard::Tick(float DeltaTime)
 // Called to bind functionality to input
 void ATetrisBoard::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
+	Super::SetupPlayerInputComponent(PlayerInputComponent);	
 }
 
 //These three methods are used to translate between coordinates (int pairs) to grid array index.
@@ -180,9 +253,56 @@ bool ATetrisBoard::TryLoweringBlock() {
 
 //IMPLEMENT THESE
 bool ATetrisBoard::TryMovingRight() {
-	return false;
+
+	//Check if each hovered tile can be moved without being blocked by wall or other tiles.
+	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
+		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
+
+		if ((i+1) % TetrisConstants::Width == 0) { return false; }
+		if (StateGrid[i+1] == TetrisConstants::TileState::Filled) { return false; }
+	}
+
+	//Move all hovered tiles 1 column to the right. Only happens if the blocking check above passes.
+	for (int i = TetrisConstants::Width - 1; i >= 0; i--) {
+		for (int j = 0; j < TetrisConstants::Height; j++) {
+			int index = j * TetrisConstants::Width + i;
+			if (StateGrid[index] != TetrisConstants::TileState::Hovered) { continue; }
+
+			StateGrid[index] = TetrisConstants::TileState::Empty;
+			StateGrid[index+1] = TetrisConstants::TileState::Hovered;
+		}
+	}
+
+	return true;
 }
 
 bool ATetrisBoard::TryMovingLeft() {
-	return false;
+	//Check if each hovered tile can be moved without being blocked by wall or other tiles.
+	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
+		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
+
+		if (i % TetrisConstants::Width == 0) { return false; }
+		if (StateGrid[i - 1] == TetrisConstants::TileState::Filled) { return false; }
+	}
+
+	//Move all hovered tiles 1 column to the right. Only happens if the blocking check above passes.
+	for (int i = 0; i < TetrisConstants::Width; i++) {
+		for (int j = 0; j < TetrisConstants::Height; j++) {
+			int index = j * TetrisConstants::Width + i;
+			if (StateGrid[index] != TetrisConstants::TileState::Hovered) { continue; }
+
+			StateGrid[index] = TetrisConstants::TileState::Empty;
+			StateGrid[index - 1] = TetrisConstants::TileState::Hovered;
+		}
+	}
+
+	return true;
+}
+
+void ATetrisBoard::LockHoveringTiles() {
+	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
+		if (StateGrid[i] == TetrisConstants::TileState::Hovered) {
+			StateGrid[i] = TetrisConstants::TileState::Filled;
+		}
+	}
 }

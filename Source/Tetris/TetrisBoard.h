@@ -7,11 +7,14 @@
 #include "Components/StaticMeshComponent.h"
 #include "TetrisConstants.h"
 #include "Materials/Material.h"
+#include "Engine/EngineTypes.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "TetrisBoard.generated.h"
 
 using std::pair;
 class UStaticMeshComponent;
 class UMaterial;
+class FTimerManager;
 
 UCLASS()
 class TETRIS_API ATetrisBoard : public APawn
@@ -28,10 +31,18 @@ public:
 	UPROPERTY(EditAnywhere)
 	UMaterial* HoverMaterial;
 
+	UPROPERTY(EditAnywhere)
+	UMaterial* OutlineMaterial;
+
 protected:
 
 	//The grid of pointers that make up the physical game board.
 	UStaticMeshComponent* MeshGrid[TetrisConstants::Height * TetrisConstants::Width];
+
+	//The outline grid
+	UStaticMeshComponent* OutlineMeshGrid[2 * (TetrisConstants::Width + TetrisConstants::Height) + 4];
+	void SetupOutlineGrid();
+	void MakeOutlineTile(int index, FVector pos);
 
 	//The grid of TileStates that make up the logical game board
 	TetrisConstants::TileState StateGrid[TetrisConstants::Height * TetrisConstants::Width];
@@ -63,6 +74,15 @@ protected:
 	bool TryLoweringBlock();
 	bool TryMovingRight();
 	bool TryMovingLeft();
+
+	//Turns hovering tiles to filled tiles
+	void LockHoveringTiles();
+
+	//Timer stuff
+	FTimerHandle GameplayTimerHandle;
+	void TestTimerFunction();
+	int TimerRepetitions;
+
 
 public:
 	// Sets default values for this pawn's properties
