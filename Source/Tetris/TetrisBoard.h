@@ -9,12 +9,14 @@
 #include "Materials/Material.h"
 #include "Engine/EngineTypes.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Camera/CameraComponent.h"
 #include "TetrisBoard.generated.h"
 
 using std::pair;
 class UStaticMeshComponent;
 class UMaterial;
 class FTimerManager;
+class UCameraComponent;
 
 UCLASS()
 class TETRIS_API ATetrisBoard : public APawn
@@ -33,6 +35,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	UMaterial* OutlineMaterial;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UCameraComponent* CameraComponent;
 
 protected:
 
@@ -82,6 +87,11 @@ protected:
 	FTimerHandle GameplayTimerHandle;
 	void TestTimerFunction();
 	int TimerRepetitions;
+
+	void LeftInput();
+	void RightInput();
+	void DownInput();
+	void FastDropInput();
 
 
 public:

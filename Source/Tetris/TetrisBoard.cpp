@@ -29,6 +29,11 @@ ATetrisBoard::ATetrisBoard()
 	}
 
 	SetupOutlineGrid();
+
+	CameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("CameraComponent"));
+	CameraComponent->AttachToComponent(MeshGrid[0], FAttachmentTransformRules::KeepRelativeTransform);
+	CameraComponent->SetRelativeLocation(FVector(5, 10, -20) * 100.0f);
+	CameraComponent->SetRelativeRotation(FRotator(90, -90, 0));
 	
 }
 
@@ -127,6 +132,11 @@ void ATetrisBoard::Tick(float DeltaTime)
 void ATetrisBoard::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);	
+
+	PlayerInputComponent->BindAction("Left", IE_Pressed, this, &ATetrisBoard::LeftInput);
+	PlayerInputComponent->BindAction("Right", IE_Pressed, this, &ATetrisBoard::RightInput);
+	PlayerInputComponent->BindAction("Down", IE_Pressed, this, &ATetrisBoard::DownInput);
+	PlayerInputComponent->BindAction("FastDrop", IE_Pressed, this, &ATetrisBoard::FastDropInput);
 }
 
 //These three methods are used to translate between coordinates (int pairs) to grid array index.
@@ -304,4 +314,17 @@ void ATetrisBoard::LockHoveringTiles() {
 			StateGrid[i] = TetrisConstants::TileState::Filled;
 		}
 	}
+}
+
+void ATetrisBoard::LeftInput() {
+	UKismetSystemLibrary::PrintString(this, FString("Left"));
+}
+void ATetrisBoard::RightInput() {
+	UKismetSystemLibrary::PrintString(this, FString("Right"));
+}
+void ATetrisBoard::DownInput() {
+	UKismetSystemLibrary::PrintString(this, FString("Down"));
+}
+void ATetrisBoard::FastDropInput() {
+	UKismetSystemLibrary::PrintString(this, FString("FastDrop"));
 }
