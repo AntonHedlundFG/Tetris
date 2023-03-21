@@ -89,9 +89,10 @@ void ATetrisBoard::BeginPlay()
 		OutlineMeshGrid[i]->SetStaticMesh(StaticMesh);
 		OutlineMeshGrid[i]->SetMaterial(0, OutlineMaterial);
 	}
-	
-	TrySpawnBlock(TetrisConstants::TileType::J);
+	NextTile = TetrisConstants::RandomTileType();
+	TrySpawnBlock(NextTile);
 	DrawGrid();
+
 
 	//TimerRepetitions = 0;
 	//GetWorldTimerManager().SetTimer(GameplayTimerHandle, this, &ATetrisBoard::TestTimerFunction, 0.25f, true, 0.25f);
@@ -119,6 +120,11 @@ void ATetrisBoard::TestTimerFunction() {
 		GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
 	}
 	DrawGrid();
+}
+
+void ATetrisBoard::ResetAutoDownTimer() {
+	GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
+	GetWorldTimerManager().SetTimer(GameplayTimerHandle, this, &ATetrisBoard::DoLoweringBlock, 1.0f, false, 2.0f);
 }
 
 // Called every frame
@@ -236,18 +242,25 @@ bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 			StateGrid[gridIndex] = TetrisConstants::TileState::Hovered;
 		}
 	}
+	NextTile = TetrisConstants::RandomTileType();
 	return ret;
 }
 
 //Tries lowering hovered blocks 1 step, if failed return false.
 bool ATetrisBoard::TryLoweringBlock() {
-
+	ResetAutoDownTimer();
 	//Check if each hovered tile can be lowered without being blocked by floor or other tiles.
 	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
 		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
 
-		if (i < TetrisConstants::Width) { return false; }
-		if (StateGrid[i - TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return false; }
+		if (i < TetrisConstants::Width || StateGrid[i - TetrisConstants::Width] == TetrisConstants::TileState::Filled) {
+			LockHoveringTiles();
+			if (!TrySpawnBlock(NextTile)) {
+				LoseGame();
+			}
+			DrawGrid();
+			return false; 
+		}
 	}
 
 	//Lower all hovered tiles by 1 row. This only happens if the blocking check above passes.
@@ -257,9 +270,10 @@ bool ATetrisBoard::TryLoweringBlock() {
 		StateGrid[i] = TetrisConstants::TileState::Empty;
 		StateGrid[i - TetrisConstants::Width] = TetrisConstants::TileState::Hovered;
 	}
-
+	DrawGrid();
 	return true;
 }
+void ATetrisBoard::DoLoweringBlock() { TryLoweringBlock(); }
 
 bool ATetrisBoard::TryMovingRight() {
 
@@ -281,7 +295,7 @@ bool ATetrisBoard::TryMovingRight() {
 			StateGrid[index+1] = TetrisConstants::TileState::Hovered;
 		}
 	}
-
+	DrawGrid();
 	return true;
 }
 
@@ -304,7 +318,7 @@ bool ATetrisBoard::TryMovingLeft() {
 			StateGrid[index - 1] = TetrisConstants::TileState::Hovered;
 		}
 	}
-
+	DrawGrid();
 	return true;
 }
 
@@ -317,14 +331,21 @@ void ATetrisBoard::LockHoveringTiles() {
 }
 
 void ATetrisBoard::LeftInput() {
-	UKismetSystemLibrary::PrintString(this, FString("Left"));
+	TryMovingLeft();
 }
 void ATetrisBoard::RightInput() {
-	UKismetSystemLibrary::PrintString(this, FString("Right"));
+	TryMovingRight();
 }
 void ATetrisBoard::DownInput() {
-	UKismetSystemLibrary::PrintString(this, FString("Down"));
+	TryLoweringBlock();
 }
 void ATetrisBoard::FastDropInput() {
-	UKismetSystemLibrary::PrintString(this, FString("FastDrop"));
+	while(TryLoweringBlock()) {}
+}
+
+void ATetrisBoard::LoseGame() {
+	APlayerController* PlayerController = Cast<APlayerController>(Controller);
+	if (PlayerController) {
+		UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, true);
+	}
 }

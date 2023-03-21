@@ -10,3 +10,9 @@ TetrisConstants::TetrisConstants()
 TetrisConstants::~TetrisConstants()
 {
 }
+
+
+TetrisConstants::TileType TetrisConstants::RandomTileType() {
+	TileType returnType = static_cast<TileType>(std::rand() % 7);
+	return returnType;
+}

@@ -77,6 +77,7 @@ protected:
 
 	//Tries lowering hovered blocks 1 step, if failed return false.
 	bool TryLoweringBlock();
+	void DoLoweringBlock();
 	bool TryMovingRight();
 	bool TryMovingLeft();
 
@@ -87,12 +88,16 @@ protected:
 	FTimerHandle GameplayTimerHandle;
 	void TestTimerFunction();
 	int TimerRepetitions;
+	void ResetAutoDownTimer();
 
 	void LeftInput();
 	void RightInput();
 	void DownInput();
 	void FastDropInput();
 
+	void LoseGame();
+
+	TetrisConstants::TileType NextTile;
 
 public:
 	// Sets default values for this pawn's properties

@@ -31,4 +31,6 @@ public:
 		T,
 		Z
 	};
+
+	static TileType RandomTileType();
 };
