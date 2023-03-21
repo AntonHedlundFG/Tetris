@@ -57,6 +57,12 @@ protected:
 	//The grid of TileStates that make up the logical game board
 	TetrisConstants::TileState StateGrid[TetrisConstants::Height * TetrisConstants::Width];
 	
+	//The grid that shows the upcoming piece.
+	UStaticMeshComponent* UpcomingMeshGrid[8];
+	void SetupUpcomingGrid();
+	void MakeUpcomingTile(int index, FVector pos);
+	void UpdateUpcomingGrid();
+
 	//GRID COORDINATE METHODS
 	// Order: Left-To-Right -> Bottom-To-Top
 	//  Y

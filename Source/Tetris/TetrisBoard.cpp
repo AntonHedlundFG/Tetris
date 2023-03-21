@@ -29,12 +29,78 @@ ATetrisBoard::ATetrisBoard()
 	}
 
 	SetupOutlineGrid();
+	SetupUpcomingGrid();
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("CameraComponent"));
 	CameraComponent->AttachToComponent(MeshGrid[0], FAttachmentTransformRules::KeepRelativeTransform);
 	CameraComponent->SetRelativeLocation(FVector(5, 10, -20) * 100.0f);
 	CameraComponent->SetRelativeRotation(FRotator(90, -90, 0));
 	
+}
+
+void ATetrisBoard::SetupUpcomingGrid() {
+	
+	for (int i = 0; i < 8; i++) {
+		MakeUpcomingTile(i, FVector(15 + (i % 4), 10 + (i / 4), 0));
+	}
+}
+
+void ATetrisBoard::MakeUpcomingTile(int index, FVector pos) {
+	FString s = FString("UpcomingTile_");
+	s.AppendInt(index);
+	UpcomingMeshGrid[index] = CreateDefaultSubobject<UStaticMeshComponent>(FName(*s));
+	UpcomingMeshGrid[index]->SetRelativeLocation(pos * 100.0f);
+	UpcomingMeshGrid[index]->SetupAttachment(MeshGrid[0]);
+}
+
+void ATetrisBoard::UpdateUpcomingGrid() {
+	for (int i = 0; i < 8; i++) {
+		UpcomingMeshGrid[i]->SetVisibility(false);
+	}
+	switch (NextTile) {
+	case TetrisConstants::TileType::I:
+		UpcomingMeshGrid[0]->SetVisibility(true); 
+		UpcomingMeshGrid[1]->SetVisibility(true); 
+		UpcomingMeshGrid[2]->SetVisibility(true); 
+		UpcomingMeshGrid[3]->SetVisibility(true);
+		break;
+	case TetrisConstants::TileType::J:
+		UpcomingMeshGrid[0]->SetVisibility(true);
+		UpcomingMeshGrid[1]->SetVisibility(true);
+		UpcomingMeshGrid[2]->SetVisibility(true);
+		UpcomingMeshGrid[4]->SetVisibility(true);
+		break;
+	case TetrisConstants::TileType::L:
+		UpcomingMeshGrid[0]->SetVisibility(true);
+		UpcomingMeshGrid[1]->SetVisibility(true);
+		UpcomingMeshGrid[2]->SetVisibility(true);
+		UpcomingMeshGrid[6]->SetVisibility(true);
+		break;
+	case TetrisConstants::TileType::O:
+		UpcomingMeshGrid[1]->SetVisibility(true);
+		UpcomingMeshGrid[2]->SetVisibility(true);
+		UpcomingMeshGrid[5]->SetVisibility(true);
+		UpcomingMeshGrid[6]->SetVisibility(true);
+		break;
+	case TetrisConstants::TileType::S:
+		UpcomingMeshGrid[0]->SetVisibility(true);
+		UpcomingMeshGrid[1]->SetVisibility(true);
+		UpcomingMeshGrid[5]->SetVisibility(true);
+		UpcomingMeshGrid[6]->SetVisibility(true);
+		break;
+	case TetrisConstants::TileType::T:
+		UpcomingMeshGrid[0]->SetVisibility(true);
+		UpcomingMeshGrid[1]->SetVisibility(true);
+		UpcomingMeshGrid[2]->SetVisibility(true);
+		UpcomingMeshGrid[5]->SetVisibility(true);
+		break;
+	case TetrisConstants::TileType::Z:
+		UpcomingMeshGrid[1]->SetVisibility(true);
+		UpcomingMeshGrid[2]->SetVisibility(true);
+		UpcomingMeshGrid[4]->SetVisibility(true);
+		UpcomingMeshGrid[5]->SetVisibility(true);
+		break;
+	}
 }
 
 void ATetrisBoard::SetupOutlineGrid() {
@@ -89,38 +155,17 @@ void ATetrisBoard::BeginPlay()
 		OutlineMeshGrid[i]->SetStaticMesh(StaticMesh);
 		OutlineMeshGrid[i]->SetMaterial(0, OutlineMaterial);
 	}
+
+	for (int i = 0; i < 8; i++) {
+		UpcomingMeshGrid[i]->SetStaticMesh(StaticMesh);
+		UpcomingMeshGrid[i]->SetMaterial(0, FilledMaterial);
+	}
+
 	NextTile = TetrisConstants::RandomTileType();
 	TrySpawnBlock(NextTile);
 	DrawGrid();
-
-
-	//TimerRepetitions = 0;
-	//GetWorldTimerManager().SetTimer(GameplayTimerHandle, this, &ATetrisBoard::TestTimerFunction, 0.25f, true, 0.25f);
 }
 
-//TEST FUNCTION DELETE LATER
-void ATetrisBoard::TestTimerFunction() {
-	bool result;
-	switch (TimerRepetitions) {
-		case 0:
-			result = TryMovingRight();
-			TimerRepetitions++;
-			break;
-		case 1:
-			result = TryMovingLeft();
-			TimerRepetitions++;
-			break;
-		case 2:
-			result = TryLoweringBlock();
-			TimerRepetitions = 0;
-			break;
-	}
-	if (!result) {
-		LockHoveringTiles();
-		GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
-	}
-	DrawGrid();
-}
 
 void ATetrisBoard::ResetAutoDownTimer() {
 	GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
@@ -245,6 +290,7 @@ bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 		}
 	}
 	NextTile = TetrisConstants::RandomTileType();
+	UpdateUpcomingGrid();
 	return ret;
 }
 
