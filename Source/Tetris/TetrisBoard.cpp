@@ -443,6 +443,6 @@ void ATetrisBoard::AddScore(int amount) {
 			CurrentScore += 1200;
 			break;
 	}
-
-	UKismetSystemLibrary::PrintString(this, FString::FromInt(CurrentScore));
+	OnPointsChanged.Broadcast();
+	//UKismetSystemLibrary::PrintString(this, FString::FromInt(CurrentScore));
 }

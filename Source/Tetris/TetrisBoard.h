@@ -18,7 +18,9 @@ class UMaterial;
 class FTimerManager;
 class UCameraComponent;
 
-UCLASS()
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPointsChangedDelegate);
+
+UCLASS(BlueprintType, Blueprintable)
 class TETRIS_API ATetrisBoard : public APawn
 {
 	GENERATED_BODY()
@@ -38,6 +40,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UCameraComponent* CameraComponent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPointsChangedDelegate OnPointsChanged;
 
 protected:
 
@@ -101,7 +106,9 @@ protected:
 	void LoseGame();
 
 	void AddScore(int rows);
-	int CurrentScore;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	int32 CurrentScore;
 
 	TetrisConstants::TileType NextTile;
 	int RotationPointIndex;
