@@ -339,6 +339,7 @@ void ATetrisBoard::LockHoveringTiles() {
 }
 
 void ATetrisBoard::CheckRowRemoval() {
+	int totalRows = 0;
 	for (int j = TetrisConstants::Height; j >= 0; j--) {
 		bool rowFilled = true;
 		for (int i = 0; i < TetrisConstants::Width; i++) {
@@ -348,8 +349,10 @@ void ATetrisBoard::CheckRowRemoval() {
 		}
 		if (rowFilled) {
 			ClearRow(j);
+			totalRows++;
 		}
 	}
+	AddScore(totalRows);
 }
 
 void ATetrisBoard::ClearRow(int row) {
@@ -376,25 +379,26 @@ void ATetrisBoard::FastDropInput() {
 	while(TryLoweringBlock()) {}
 }
 void ATetrisBoard::RotateInput() {
-
-	UKismetSystemLibrary::PrintString(this, FString("Rotate Start"));
-
+	//Get coordinate for the rotation point.
 	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
 
+	//arrays to store coordinates
 	pair<int, int> oldCoords[4];
 	pair<int, int> newCoords[4];
+
+	//iterator over coordinate arrays
 	int coordIndex = 0;
 	
 	//This checks if a rotation is actually OK (not out of bounds or collide)
+	//It also stores coordinates for hovering tiles, both old and new
 	for (int i = 0; i < TetrisConstants::Width; i++) {
 		for (int j = 0; j < TetrisConstants::Height; j++) {
-			
-			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Hovered) {
-				continue;
-			}
+			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Hovered) { continue; }
 
+			//90 degree coordinate rotation around rotation point.
 			int x = rotationCoord.first + (j - rotationCoord.second);
 			int y = rotationCoord.second - (i - rotationCoord.first);
+			
 			if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return; }
 			if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return; }
 
@@ -403,15 +407,15 @@ void ATetrisBoard::RotateInput() {
 			coordIndex++;
 		}
 	}
-	UKismetSystemLibrary::PrintString(this, FString("Rotate OK"));
 
+	//If we pass the rotation check above, use the stored coordinates to actually rotate the tile.
 	for (int i = 0; i < 4; i++) {
 		StateGrid[IndexFromCoord(oldCoords[i])] = TetrisConstants::TileState::Empty;
 	}
 	for (int i = 0; i < 4; i++) {
 		StateGrid[IndexFromCoord(newCoords[i])] = TetrisConstants::TileState::Hovered;
 	}
-	UKismetSystemLibrary::PrintString(this, FString("Rotate Done"));
+
 	DrawGrid();
 }
 
@@ -420,4 +424,25 @@ void ATetrisBoard::LoseGame() {
 	if (PlayerController) {
 		UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, true);
 	}
+}
+
+void ATetrisBoard::AddScore(int amount) {
+	switch (amount) {
+		case 0:
+			return;
+		case 1:
+			CurrentScore += 40;
+			break;
+		case 2:
+			CurrentScore += 100;
+			break;
+		case 3:
+			CurrentScore += 300;
+			break;
+		case 4:
+			CurrentScore += 1200;
+			break;
+	}
+
+	UKismetSystemLibrary::PrintString(this, FString::FromInt(CurrentScore));
 }

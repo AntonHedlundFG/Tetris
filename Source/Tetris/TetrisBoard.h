@@ -100,6 +100,9 @@ protected:
 
 	void LoseGame();
 
+	void AddScore(int rows);
+	int CurrentScore;
+
 	TetrisConstants::TileType NextTile;
 	int RotationPointIndex;
 
