@@ -251,7 +251,6 @@ bool ATetrisBoard::TryLoweringBlock() {
 	return true;
 }
 
-//IMPLEMENT THESE
 bool ATetrisBoard::TryMovingRight() {
 
 	//Check if each hovered tile can be moved without being blocked by wall or other tiles.
