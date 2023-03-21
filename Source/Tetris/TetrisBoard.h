@@ -83,6 +83,8 @@ protected:
 
 	//Turns hovering tiles to filled tiles
 	void LockHoveringTiles();
+	void CheckRowRemoval();
+	void ClearRow(int row);
 
 	//Timer stuff
 	FTimerHandle GameplayTimerHandle;

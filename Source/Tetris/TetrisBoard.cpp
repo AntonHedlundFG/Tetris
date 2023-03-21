@@ -328,6 +328,32 @@ void ATetrisBoard::LockHoveringTiles() {
 			StateGrid[i] = TetrisConstants::TileState::Filled;
 		}
 	}
+	CheckRowRemoval();
+}
+
+void ATetrisBoard::CheckRowRemoval() {
+	for (int j = TetrisConstants::Height; j >= 0; j--) {
+		bool rowFilled = true;
+		for (int i = 0; i < TetrisConstants::Width; i++) {
+			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Filled) {
+				rowFilled = false;
+			}
+		}
+		if (rowFilled) {
+			ClearRow(j);
+		}
+	}
+}
+
+void ATetrisBoard::ClearRow(int row) {
+	for (int j = row; j < TetrisConstants::Height - 1; j++) {
+		for (int i = 0; i < TetrisConstants::Width; i++) {
+			StateGrid[j * TetrisConstants::Width + i] = StateGrid[(j + 1) * TetrisConstants::Width + i];
+		}
+	}
+	for (int i = 0; i < TetrisConstants::Width; i++) {
+		StateGrid[(TetrisConstants::Height - 1) * TetrisConstants::Width + i] = TetrisConstants::TileState::Empty;
+	}
 }
 
 void ATetrisBoard::LeftInput() {
