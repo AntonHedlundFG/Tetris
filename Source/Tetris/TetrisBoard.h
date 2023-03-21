@@ -96,10 +96,12 @@ protected:
 	void RightInput();
 	void DownInput();
 	void FastDropInput();
+	void RotateInput();
 
 	void LoseGame();
 
 	TetrisConstants::TileType NextTile;
+	int RotationPointIndex;
 
 public:
 	// Sets default values for this pawn's properties

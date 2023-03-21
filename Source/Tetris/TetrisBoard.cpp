@@ -143,6 +143,7 @@ void ATetrisBoard::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction("Right", IE_Pressed, this, &ATetrisBoard::RightInput);
 	PlayerInputComponent->BindAction("Down", IE_Pressed, this, &ATetrisBoard::DownInput);
 	PlayerInputComponent->BindAction("FastDrop", IE_Pressed, this, &ATetrisBoard::FastDropInput);
+	PlayerInputComponent->BindAction("Rotate", IE_Pressed, this, &ATetrisBoard::RotateInput);
 }
 
 //These three methods are used to translate between coordinates (int pairs) to grid array index.
@@ -193,42 +194,43 @@ bool ATetrisBoard::TrySpawnBlock(TetrisConstants::TileType type) {
 			coordinates[3] = std::make_pair(6, 19);
 			break;
 		case TetrisConstants::TileType::J:
-			coordinates[1] = std::make_pair(3, 18);
-			coordinates[2] = std::make_pair(4, 18);
-			coordinates[3] = std::make_pair(5, 18);
-			coordinates[0] = std::make_pair(3, 19);
+			coordinates[0] = std::make_pair(5, 18);
+			coordinates[1] = std::make_pair(4, 18);
+			coordinates[2] = std::make_pair(3, 18);
+			coordinates[3] = std::make_pair(3, 19);
 			break;
 		case TetrisConstants::TileType::L:
-			coordinates[1] = std::make_pair(3, 18);
-			coordinates[2] = std::make_pair(4, 18);
-			coordinates[3] = std::make_pair(5, 18);
-			coordinates[0] = std::make_pair(5, 19);
+			coordinates[0] = std::make_pair(3, 18);
+			coordinates[1] = std::make_pair(4, 18);
+			coordinates[2] = std::make_pair(5, 18);
+			coordinates[3] = std::make_pair(5, 19);
 			break;
 		case TetrisConstants::TileType::O:
-			coordinates[2] = std::make_pair(4, 18);
-			coordinates[3] = std::make_pair(5, 18);
-			coordinates[0] = std::make_pair(4, 19);
-			coordinates[1] = std::make_pair(5, 19);
+			coordinates[0] = std::make_pair(4, 18);
+			coordinates[1] = std::make_pair(5, 18);
+			coordinates[2] = std::make_pair(4, 19);
+			coordinates[3] = std::make_pair(5, 19);
 			break;
 		case TetrisConstants::TileType::S:
-			coordinates[1] = std::make_pair(3, 18);
-			coordinates[2] = std::make_pair(4, 18);
-			coordinates[3] = std::make_pair(4, 19);
-			coordinates[0] = std::make_pair(5, 19);
+			coordinates[0] = std::make_pair(3, 18);
+			coordinates[1] = std::make_pair(4, 18);
+			coordinates[2] = std::make_pair(4, 19);
+			coordinates[3] = std::make_pair(5, 19);
 			break;
 		case TetrisConstants::TileType::T:
+			coordinates[0] = std::make_pair(4, 19);
 			coordinates[1] = std::make_pair(3, 18);
 			coordinates[2] = std::make_pair(4, 18);
-			coordinates[0] = std::make_pair(5, 18);
-			coordinates[3] = std::make_pair(4, 19);
+			coordinates[3] = std::make_pair(5, 18);
 			break;
 		case TetrisConstants::TileType::Z:
+			coordinates[0] = std::make_pair(3, 19);
+			coordinates[1] = std::make_pair(4, 19);
 			coordinates[2] = std::make_pair(4, 18);
-			coordinates[0] = std::make_pair(5, 18);
-			coordinates[1] = std::make_pair(3, 19);
-			coordinates[3] = std::make_pair(4, 19);
+			coordinates[3] = std::make_pair(5, 18);
 			break;
 	}
+	RotationPointIndex = IndexFromCoord(coordinates[2]);
 	return TrySpawnBlock(coordinates);
 }
 bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
@@ -270,6 +272,7 @@ bool ATetrisBoard::TryLoweringBlock() {
 		StateGrid[i] = TetrisConstants::TileState::Empty;
 		StateGrid[i - TetrisConstants::Width] = TetrisConstants::TileState::Hovered;
 	}
+	RotationPointIndex -= TetrisConstants::Width;
 	DrawGrid();
 	return true;
 }
@@ -295,6 +298,8 @@ bool ATetrisBoard::TryMovingRight() {
 			StateGrid[index+1] = TetrisConstants::TileState::Hovered;
 		}
 	}
+	RotationPointIndex++;
+
 	DrawGrid();
 	return true;
 }
@@ -318,6 +323,8 @@ bool ATetrisBoard::TryMovingLeft() {
 			StateGrid[index - 1] = TetrisConstants::TileState::Hovered;
 		}
 	}
+	RotationPointIndex--;
+
 	DrawGrid();
 	return true;
 }
@@ -367,6 +374,45 @@ void ATetrisBoard::DownInput() {
 }
 void ATetrisBoard::FastDropInput() {
 	while(TryLoweringBlock()) {}
+}
+void ATetrisBoard::RotateInput() {
+
+	UKismetSystemLibrary::PrintString(this, FString("Rotate Start"));
+
+	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
+
+	pair<int, int> oldCoords[4];
+	pair<int, int> newCoords[4];
+	int coordIndex = 0;
+	
+	//This checks if a rotation is actually OK (not out of bounds or collide)
+	for (int i = 0; i < TetrisConstants::Width; i++) {
+		for (int j = 0; j < TetrisConstants::Height; j++) {
+			
+			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Hovered) {
+				continue;
+			}
+
+			int x = rotationCoord.first + (j - rotationCoord.second);
+			int y = rotationCoord.second - (i - rotationCoord.first);
+			if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return; }
+			if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return; }
+
+			oldCoords[coordIndex] = std::make_pair(i, j);
+			newCoords[coordIndex] = std::make_pair(x, y);
+			coordIndex++;
+		}
+	}
+	UKismetSystemLibrary::PrintString(this, FString("Rotate OK"));
+
+	for (int i = 0; i < 4; i++) {
+		StateGrid[IndexFromCoord(oldCoords[i])] = TetrisConstants::TileState::Empty;
+	}
+	for (int i = 0; i < 4; i++) {
+		StateGrid[IndexFromCoord(newCoords[i])] = TetrisConstants::TileState::Hovered;
+	}
+	UKismetSystemLibrary::PrintString(this, FString("Rotate Done"));
+	DrawGrid();
 }
 
 void ATetrisBoard::LoseGame() {
