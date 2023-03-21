@@ -45,18 +45,17 @@ public:
 	FOnPointsChangedDelegate OnPointsChanged;
 
 protected:
-
 	//The grid of pointers that make up the physical game board.
 	UStaticMeshComponent* MeshGrid[TetrisConstants::Height * TetrisConstants::Width];
 
-	//The outline grid
+	//The grid of TileStates that make up the logical game board
+	TetrisConstants::TileState StateGrid[TetrisConstants::Height * TetrisConstants::Width];
+
+	//The static border grid.
 	UStaticMeshComponent* OutlineMeshGrid[2 * (TetrisConstants::Width + TetrisConstants::Height) + 4];
 	void SetupOutlineGrid();
 	void MakeOutlineTile(int index, FVector pos);
 
-	//The grid of TileStates that make up the logical game board
-	TetrisConstants::TileState StateGrid[TetrisConstants::Height * TetrisConstants::Width];
-	
 	//The grid that shows the upcoming piece.
 	UStaticMeshComponent* UpcomingMeshGrid[8];
 	void SetupUpcomingGrid();
@@ -71,15 +70,13 @@ protected:
 	// [0] 0   1   2
 	//    [0] [1] [2] X
 
-	//Returns the index in the grid for a coordinate. -1 if outside grid scope
+	//Index <-> Coordinate translation for the grid array
 	int IndexFromCoord(int x, int y);
 	int IndexFromCoord(pair<int, int> coordinate);
-	//Returns the coordinate pair of ints for an index. pair(-1, -1) if outside grid scope.
 	pair<int, int> CoordFromIndex(int index);
 
 	//Updates board visibility from current logical grid
 	void DrawGrid();
-
 
 	//Spawns a block of the designated type in the spawn position. 
 	//If any spawn position blocks are already occupied, returns false. Otherwise, true.
@@ -94,29 +91,36 @@ protected:
 
 	//Turns hovering tiles to filled tiles
 	void LockHoveringTiles();
+
+	//Checks which rows should be cleared after a hovering tile lands.
+	//ClearRow actually removes the row and lowers the ones above.
 	void CheckRowRemoval();
 	void ClearRow(int row);
 
-	//Timer stuff
+	//Timer Handle that handles automatically lowering blocks after a few seconds
 	FTimerHandle GameplayTimerHandle;
-	void TestTimerFunction();
-	int TimerRepetitions;
 	void ResetAutoDownTimer();
 
+	//Input handlers
 	void LeftInput();
 	void RightInput();
 	void DownInput();
 	void FastDropInput();
 	void RotateInput();
 
+	//Quit game when you lose
 	void LoseGame();
 
+	//Update score, invokes event
 	void AddScore(int rows);
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	int32 CurrentScore;
 
+	//Indicates which TileType will be spawned next
 	TetrisConstants::TileType NextTile;
+
+	//Index of tile that current TileType should be rotated around
 	int RotationPointIndex;
 
 public:
