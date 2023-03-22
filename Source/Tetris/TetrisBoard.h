@@ -40,9 +40,6 @@ public:
 	UPROPERTY(EditAnywhere)
 	UMaterial* OutlineMaterial;
 
-	UPROPERTY(EditAnywhere)
-	UMaterial* RotationPointMaterial;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UCameraComponent* CameraComponent;
 

@@ -248,10 +248,6 @@ void ATetrisBoard::DrawGrid() {
 				MeshGrid[i]->SetMaterial(0, HoverMaterial);
 				break;
 		}
-		if (i == RotationPointIndex) {
-			MeshGrid[i]->SetVisibility(true);
-			MeshGrid[i]->SetMaterial(0, RotationPointMaterial);
-		}
 	}
 }
 
