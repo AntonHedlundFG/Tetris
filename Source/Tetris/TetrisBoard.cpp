@@ -1,9 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "TetrisBoard.h"
 
-// Sets default values
 ATetrisBoard::ATetrisBoard()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -28,9 +24,11 @@ ATetrisBoard::ATetrisBoard()
 		}
 	}
 
+	//Set up the static border grid and the grid that shows upcoming tiles.
 	SetupOutlineGrid();
 	SetupUpcomingGrid();
 
+	//Camera & hardcoded position & rotation
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("CameraComponent"));
 	CameraComponent->AttachToComponent(MeshGrid[0], FAttachmentTransformRules::KeepRelativeTransform);
 	CameraComponent->SetRelativeLocation(FVector(5, 10, -20) * 100.0f);
@@ -153,16 +151,15 @@ void ATetrisBoard::BeginPlay()
 		PC->bShowMouseCursor = true;
 	}
 
+	//Set up all meshes to match the assigned StaticMesh
 	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
 		MeshGrid[i]->SetStaticMesh(StaticMesh);
 	}
-
 	for (int i = 0; i < (2 * (TetrisConstants::Width + TetrisConstants::Height) + 4); i++) {
 		if (OutlineMeshGrid[i] == nullptr) { break; }
 		OutlineMeshGrid[i]->SetStaticMesh(StaticMesh);
 		OutlineMeshGrid[i]->SetMaterial(0, OutlineMaterial);
 	}
-
 	for (int i = 0; i < 8; i++) {
 		UpcomingMeshGrid[i]->SetStaticMesh(StaticMesh);
 		UpcomingMeshGrid[i]->SetMaterial(0, FilledMaterial);
@@ -171,6 +168,7 @@ void ATetrisBoard::BeginPlay()
 	DrawGrid();
 }
 
+//Called by the UI button to start the game
 void ATetrisBoard::StartNewGame() {
 	
 	IsPlaying = true;
@@ -302,6 +300,7 @@ bool ATetrisBoard::TrySpawnBlock(TetrisConstants::TileType type) {
 	RotationPointIndex = IndexFromCoord(coordinates[2]);
 	return TrySpawnBlock(coordinates);
 }
+
 bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 	bool ret = true;
 	for (int i = 0; i < 4; i++) {
