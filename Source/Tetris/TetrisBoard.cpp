@@ -248,6 +248,10 @@ void ATetrisBoard::DrawGrid() {
 				MeshGrid[i]->SetMaterial(0, HoverMaterial);
 				break;
 		}
+		if (i == RotationPointIndex) {
+			MeshGrid[i]->SetVisibility(true);
+			MeshGrid[i]->SetMaterial(0, RotationPointMaterial);
+		}
 	}
 }
 
@@ -448,12 +452,12 @@ void ATetrisBoard::DownInput() {
 void ATetrisBoard::FastDropInput() {
 	if (!IsPlaying) { return; }
 	IsPlaying = false;
-	GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, 0.1f);
+	GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, SecondsPerFastDrop);
 	
 }
 void ATetrisBoard::FastDropTimerFunction() {
 	if (TryLoweringBlock()) {
-		GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, 0.1f);
+		GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, SecondsPerFastDrop);
 	}
 	else {
 		IsPlaying = true;
@@ -470,26 +474,11 @@ void ATetrisBoard::RotateInput() {
 	pair<int, int> oldCoords[4];
 	pair<int, int> newCoords[4];
 
-	//iterator over coordinate arrays
-	int coordIndex = 0;
 	
-	//This checks if a rotation is actually OK (not out of bounds or collide)
-	//It also stores coordinates for hovering tiles, both old and new
-	for (int i = 0; i < TetrisConstants::Width; i++) {
-		for (int j = 0; j < TetrisConstants::Height; j++) {
-			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Hovered) { continue; }
-
-			//90 degree coordinate rotation around rotation point.
-			int x = rotationCoord.first + (j - rotationCoord.second);
-			int y = rotationCoord.second - (i - rotationCoord.first);
-			
-			if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return; }
-			if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return; }
-
-			oldCoords[coordIndex] = std::make_pair(i, j);
-			newCoords[coordIndex] = std::make_pair(x, y);
-			coordIndex++;
-		}
+	if (CheckRotation(oldCoords, newCoords, 0)) {
+	} else if (CheckRotation(oldCoords, newCoords, 1)) {}
+	else if (!CheckRotation(oldCoords, newCoords, -1)) {
+		return;
 	}
 
 	//If we pass the rotation check above, use the stored coordinates to actually rotate the tile.
@@ -503,16 +492,39 @@ void ATetrisBoard::RotateInput() {
 	DrawGrid();
 }
 
+bool ATetrisBoard::CheckRotation(pair<int, int> oldCoords[4], pair<int, int> newCoords[4], int SideMod) {
+	if (SideMod != 0) {
+		SideMod = SideMod > 0 ? 1 : -1;
+	}
+
+	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
+	int coordIndex = 0;
+
+	for (int i = 0; i < TetrisConstants::Width; i++) {
+		for (int j = 0; j < TetrisConstants::Height; j++) {
+			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Hovered) { continue; }
+
+			//90 degree coordinate rotation around rotation point.
+			int x = rotationCoord.first + (j - rotationCoord.second) + SideMod;
+			int y = rotationCoord.second - (i - rotationCoord.first);
+
+			if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return false; }
+			if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return false; }
+
+			oldCoords[coordIndex] = std::make_pair(i, j);
+			newCoords[coordIndex] = std::make_pair(x, y);
+			coordIndex++;
+		}
+	}
+	RotationPointIndex += SideMod;
+	return true;
+}
+
 void ATetrisBoard::LoseGame() {
 	
 	OnGameStateChange.Broadcast(false);
 	GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
 	IsPlaying = false;
-	
-	/*APlayerController* PlayerController = Cast<APlayerController>(Controller);
-	if (PlayerController) {
-		UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, true);
-	}*/
 }
 
 void ATetrisBoard::AddScore(int amount) {
@@ -533,5 +545,4 @@ void ATetrisBoard::AddScore(int amount) {
 			break;
 	}
 	OnPointsChanged.Broadcast();
-	//UKismetSystemLibrary::PrintString(this, FString::FromInt(CurrentScore));
 }

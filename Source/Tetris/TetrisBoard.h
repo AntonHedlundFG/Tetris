@@ -40,6 +40,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	UMaterial* OutlineMaterial;
 
+	UPROPERTY(EditAnywhere)
+	UMaterial* RotationPointMaterial;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UCameraComponent* CameraComponent;
 
@@ -54,6 +57,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float SecondsPerAutoDown = 1.0f;
+
+	UPROPERTY(EditAnywhere)
+	float SecondsPerFastDrop = 0.05f;
 
 protected:
 	//The grid of pointers that make up the physical game board.
@@ -122,6 +128,9 @@ protected:
 	void FastDropInput();
 	void RotateInput();
 
+	//Rotation checks
+	bool CheckRotation(pair<int, int> oldCoords[4], pair<int, int> newCoords[4], int SideMod);
+
 	//Quit game when you lose
 	void LoseGame();
 	void ClearBoard();
@@ -139,7 +148,7 @@ protected:
 	bool IsPlaying;
 
 	//Index of tile that current TileType should be rotated around
-	int RotationPointIndex;
+	int RotationPointIndex = -1;
 
 public:
 	// Sets default values for this pawn's properties
