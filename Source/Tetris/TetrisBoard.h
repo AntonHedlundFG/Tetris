@@ -10,6 +10,7 @@
 #include "Engine/EngineTypes.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Camera/CameraComponent.h"
+#include "Delegates/Delegate.h"
 #include "TetrisBoard.generated.h"
 
 using std::pair;
@@ -19,6 +20,7 @@ class FTimerManager;
 class UCameraComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPointsChangedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGameStateChange, bool, NewState);
 
 UCLASS(BlueprintType, Blueprintable)
 class TETRIS_API ATetrisBoard : public APawn
@@ -43,6 +45,15 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPointsChangedDelegate OnPointsChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnGameStateChange OnGameStateChange;
+
+	UFUNCTION(BlueprintCallable)
+	void StartNewGame();
+
+	UPROPERTY(EditAnywhere)
+	float SecondsPerAutoDown = 1.0f;
 
 protected:
 	//The grid of pointers that make up the physical game board.
@@ -101,6 +112,9 @@ protected:
 	FTimerHandle GameplayTimerHandle;
 	void ResetAutoDownTimer();
 
+	FTimerHandle FastDropTimerHandle;
+	void FastDropTimerFunction();
+
 	//Input handlers
 	void LeftInput();
 	void RightInput();
@@ -110,6 +124,7 @@ protected:
 
 	//Quit game when you lose
 	void LoseGame();
+	void ClearBoard();
 
 	//Update score, invokes event
 	void AddScore(int rows);
@@ -119,6 +134,9 @@ protected:
 
 	//Indicates which TileType will be spawned next
 	TetrisConstants::TileType NextTile;
+
+	//Is a game active?
+	bool IsPlaying;
 
 	//Index of tile that current TileType should be rotated around
 	int RotationPointIndex;

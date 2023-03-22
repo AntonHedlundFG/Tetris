@@ -146,6 +146,13 @@ void ATetrisBoard::BeginPlay()
 {
 	Super::BeginPlay();
 
+	IsPlaying = false;
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC) {
+		PC->bShowMouseCursor = true;
+	}
+
 	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
 		MeshGrid[i]->SetStaticMesh(StaticMesh);
 	}
@@ -159,17 +166,34 @@ void ATetrisBoard::BeginPlay()
 	for (int i = 0; i < 8; i++) {
 		UpcomingMeshGrid[i]->SetStaticMesh(StaticMesh);
 		UpcomingMeshGrid[i]->SetMaterial(0, FilledMaterial);
+		UpcomingMeshGrid[i]->SetVisibility(false);
 	}
-
-	NextTile = TetrisConstants::RandomTileType();
-	TrySpawnBlock(NextTile);
 	DrawGrid();
 }
 
+void ATetrisBoard::StartNewGame() {
+	
+	IsPlaying = true;
+	OnGameStateChange.Broadcast(true);
+
+	NextTile = TetrisConstants::RandomTileType();
+	ClearBoard();
+	TrySpawnBlock(NextTile);
+	DrawGrid();
+
+	CurrentScore = 0;
+	OnPointsChanged.Broadcast();
+}
+
+void ATetrisBoard::ClearBoard() {
+	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
+		StateGrid[i] = TetrisConstants::TileState::Empty;
+	}
+}
 
 void ATetrisBoard::ResetAutoDownTimer() {
 	GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
-	GetWorldTimerManager().SetTimer(GameplayTimerHandle, this, &ATetrisBoard::DoLoweringBlock, 1.0f, false, 2.0f);
+	GetWorldTimerManager().SetTimer(GameplayTimerHandle, this, &ATetrisBoard::DoLoweringBlock, 1.0f, false, SecondsPerAutoDown);
 }
 
 // Called every frame
@@ -413,18 +437,32 @@ void ATetrisBoard::ClearRow(int row) {
 }
 
 void ATetrisBoard::LeftInput() {
-	TryMovingLeft();
+	if (IsPlaying) { TryMovingLeft(); }
 }
 void ATetrisBoard::RightInput() {
-	TryMovingRight();
+	if (IsPlaying) { TryMovingRight(); }
 }
 void ATetrisBoard::DownInput() {
-	TryLoweringBlock();
+	if (IsPlaying) { TryLoweringBlock(); }
 }
 void ATetrisBoard::FastDropInput() {
-	while(TryLoweringBlock()) {}
+	if (!IsPlaying) { return; }
+	IsPlaying = false;
+	GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, 0.1f);
+	
 }
+void ATetrisBoard::FastDropTimerFunction() {
+	if (TryLoweringBlock()) {
+		GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, 0.1f);
+	}
+	else {
+		IsPlaying = true;
+	}
+}
+
 void ATetrisBoard::RotateInput() {
+	if (!IsPlaying) { return; }
+
 	//Get coordinate for the rotation point.
 	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
 
@@ -466,10 +504,15 @@ void ATetrisBoard::RotateInput() {
 }
 
 void ATetrisBoard::LoseGame() {
-	APlayerController* PlayerController = Cast<APlayerController>(Controller);
+	
+	OnGameStateChange.Broadcast(false);
+	GetWorldTimerManager().ClearTimer(GameplayTimerHandle);
+	IsPlaying = false;
+	
+	/*APlayerController* PlayerController = Cast<APlayerController>(Controller);
 	if (PlayerController) {
 		UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, true);
-	}
+	}*/
 }
 
 void ATetrisBoard::AddScore(int amount) {
