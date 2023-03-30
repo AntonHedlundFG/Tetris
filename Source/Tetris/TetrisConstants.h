@@ -3,6 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineTypes.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+using std::pair;
 
 /**
  * 
@@ -32,5 +36,12 @@ public:
 		Z
 	};
 
+	//Randomly selects a TileType, no weighting
 	static TileType RandomTileType();
+
+	// Gives a pair<int, int>[4] of coordinates 
+	// with rotation point at index [2]
+	// Y-coordinate 0 is top row, Y <= 0
+	// X-coordinate 0 should be at width/2 + 1
+	static pair<int, int>* TileCoordinates(TileType type);
 };

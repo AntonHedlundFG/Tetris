@@ -100,8 +100,9 @@ protected:
 	//Tries lowering hovered blocks 1 step, if failed return false.
 	bool TryLoweringBlock();
 	void DoLoweringBlock();
-	bool TryMovingRight();
-	bool TryMovingLeft();
+	bool TryMovingSideways(bool right);
+
+	pair<int, int> HoveringTileCoordinates[4];
 
 	//Turns hovering tiles to filled tiles
 	void LockHoveringTiles();

@@ -252,50 +252,10 @@ void ATetrisBoard::DrawGrid() {
 //Spawns a block of the designated type in the spawn position. 
 //If any spawn position blocks are already occupied, returns false. Otherwise, true.
 bool ATetrisBoard::TrySpawnBlock(TetrisConstants::TileType type) {
-	pair<int, int> coordinates[4];
-	switch (type) {
-		case TetrisConstants::TileType::I:
-			coordinates[0] = std::make_pair(3, 19);
-			coordinates[1] = std::make_pair(4, 19);
-			coordinates[2] = std::make_pair(5, 19);
-			coordinates[3] = std::make_pair(6, 19);
-			break;
-		case TetrisConstants::TileType::J:
-			coordinates[0] = std::make_pair(5, 18);
-			coordinates[1] = std::make_pair(4, 18);
-			coordinates[2] = std::make_pair(3, 18);
-			coordinates[3] = std::make_pair(3, 19);
-			break;
-		case TetrisConstants::TileType::L:
-			coordinates[0] = std::make_pair(3, 18);
-			coordinates[1] = std::make_pair(4, 18);
-			coordinates[2] = std::make_pair(5, 18);
-			coordinates[3] = std::make_pair(5, 19);
-			break;
-		case TetrisConstants::TileType::O:
-			coordinates[0] = std::make_pair(4, 18);
-			coordinates[1] = std::make_pair(5, 18);
-			coordinates[2] = std::make_pair(4, 19);
-			coordinates[3] = std::make_pair(5, 19);
-			break;
-		case TetrisConstants::TileType::S:
-			coordinates[0] = std::make_pair(3, 18);
-			coordinates[1] = std::make_pair(4, 18);
-			coordinates[2] = std::make_pair(4, 19);
-			coordinates[3] = std::make_pair(5, 19);
-			break;
-		case TetrisConstants::TileType::T:
-			coordinates[0] = std::make_pair(4, 19);
-			coordinates[1] = std::make_pair(3, 18);
-			coordinates[2] = std::make_pair(4, 18);
-			coordinates[3] = std::make_pair(5, 18);
-			break;
-		case TetrisConstants::TileType::Z:
-			coordinates[0] = std::make_pair(3, 19);
-			coordinates[1] = std::make_pair(4, 19);
-			coordinates[2] = std::make_pair(4, 18);
-			coordinates[3] = std::make_pair(5, 18);
-			break;
+	pair<int, int> coordinates[4]; 
+	for (int i = 0; i < 4; i++) 
+	{
+		coordinates[i] = TetrisConstants::TileCoordinates(type)[i];
 	}
 	RotationPointIndex = IndexFromCoord(coordinates[2]);
 	return TrySpawnBlock(coordinates);
@@ -311,7 +271,9 @@ bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 		else {
 			StateGrid[gridIndex] = TetrisConstants::TileState::Hovered;
 		}
+		HoveringTileCoordinates[i] = coordinates[i];
 	}
+	
 	NextTile = TetrisConstants::RandomTileType();
 	UpdateUpcomingGrid();
 	return ret;
@@ -320,89 +282,76 @@ bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 //Tries lowering hovered blocks 1 step, if failed return false.
 bool ATetrisBoard::TryLoweringBlock() {
 	ResetAutoDownTimer();
-	//Check if each hovered tile can be lowered without being blocked by floor or other tiles.
-	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
-		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
 
-		if (i < TetrisConstants::Width || StateGrid[i - TetrisConstants::Width] == TetrisConstants::TileState::Filled) {
+	//Check if each hovered tile can be lowered without being blocked by floor or other tiles.
+	//If they cannot, lock them in and spawn next tile.
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
+		if (coordinate < TetrisConstants::Width || StateGrid[coordinate - TetrisConstants::Width] == TetrisConstants::TileState::Filled)
+		{
 			LockHoveringTiles();
 			if (!TrySpawnBlock(NextTile)) {
 				LoseGame();
 			}
 			DrawGrid();
-			return false; 
+			return false;
 		}
 	}
 
 	//Lower all hovered tiles by 1 row. This only happens if the blocking check above passes.
-	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
-		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
-
-		StateGrid[i] = TetrisConstants::TileState::Empty;
-		StateGrid[i - TetrisConstants::Width] = TetrisConstants::TileState::Hovered;
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
+		StateGrid[coordinate] = TetrisConstants::TileState::Empty;
+		HoveringTileCoordinates[i].second--;
 	}
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
+		StateGrid[coordinate] = TetrisConstants::TileState::Hovered;
+	}
+
 	RotationPointIndex -= TetrisConstants::Width;
 	DrawGrid();
 	return true;
 }
 void ATetrisBoard::DoLoweringBlock() { TryLoweringBlock(); }
 
-bool ATetrisBoard::TryMovingRight() {
-
+bool ATetrisBoard::TryMovingSideways(bool right) 
+{
+	int modValue = right ? 1 : -1;
 	//Check if each hovered tile can be moved without being blocked by wall or other tiles.
-	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
-		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
-
-		if ((i+1) % TetrisConstants::Width == 0) { return false; }
-		if (StateGrid[i+1] == TetrisConstants::TileState::Filled) { return false; }
-	}
-
-	//Move all hovered tiles 1 column to the right. Only happens if the blocking check above passes.
-	for (int i = TetrisConstants::Width - 1; i >= 0; i--) {
-		for (int j = 0; j < TetrisConstants::Height; j++) {
-			int index = j * TetrisConstants::Width + i;
-			if (StateGrid[index] != TetrisConstants::TileState::Hovered) { continue; }
-
-			StateGrid[index] = TetrisConstants::TileState::Empty;
-			StateGrid[index+1] = TetrisConstants::TileState::Hovered;
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
+		if (right) {
+			if ((coordinate + 1) % TetrisConstants::Width == 0) { return false; }
+			if (StateGrid[coordinate + 1] == TetrisConstants::TileState::Filled) { return false; }
+		}
+		else {
+			if (coordinate % TetrisConstants::Width == 0) { return false; }
+			if (StateGrid[coordinate - 1] == TetrisConstants::TileState::Filled) { return false; }
 		}
 	}
-	RotationPointIndex++;
 
-	DrawGrid();
-	return true;
-}
-
-bool ATetrisBoard::TryMovingLeft() {
-	//Check if each hovered tile can be moved without being blocked by wall or other tiles.
-	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
-		if (StateGrid[i] != TetrisConstants::TileState::Hovered) { continue; }
-
-		if (i % TetrisConstants::Width == 0) { return false; }
-		if (StateGrid[i - 1] == TetrisConstants::TileState::Filled) { return false; }
+	//Move all hovered tiles 1 column. Only happens if the blocking check above passes.
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
+		StateGrid[coordinate] = TetrisConstants::TileState::Empty;
+		HoveringTileCoordinates[i].first += modValue;
+	}
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
+		StateGrid[coordinate] = TetrisConstants::TileState::Hovered;
 	}
 
-	//Move all hovered tiles 1 column to the right. Only happens if the blocking check above passes.
-	for (int i = 0; i < TetrisConstants::Width; i++) {
-		for (int j = 0; j < TetrisConstants::Height; j++) {
-			int index = j * TetrisConstants::Width + i;
-			if (StateGrid[index] != TetrisConstants::TileState::Hovered) { continue; }
 
-			StateGrid[index] = TetrisConstants::TileState::Empty;
-			StateGrid[index - 1] = TetrisConstants::TileState::Hovered;
-		}
-	}
-	RotationPointIndex--;
+	RotationPointIndex += modValue;
 
 	DrawGrid();
 	return true;
 }
 
 void ATetrisBoard::LockHoveringTiles() {
-	for (int i = 0; i < (TetrisConstants::Height * TetrisConstants::Width); i++) {
-		if (StateGrid[i] == TetrisConstants::TileState::Hovered) {
-			StateGrid[i] = TetrisConstants::TileState::Filled;
-		}
+	for (int i = 0; i < 4; i++) {
+		StateGrid[IndexFromCoord(HoveringTileCoordinates[i])] = TetrisConstants::TileState::Filled;
 	}
 	CheckRowRemoval();
 }
@@ -436,10 +385,10 @@ void ATetrisBoard::ClearRow(int row) {
 }
 
 void ATetrisBoard::LeftInput() {
-	if (IsPlaying) { TryMovingLeft(); }
+	if (IsPlaying) { TryMovingSideways(false); }
 }
 void ATetrisBoard::RightInput() {
-	if (IsPlaying) { TryMovingRight(); }
+	if (IsPlaying) { TryMovingSideways(true); }
 }
 void ATetrisBoard::DownInput() {
 	if (IsPlaying) { TryLoweringBlock(); }
@@ -468,7 +417,6 @@ void ATetrisBoard::RotateInput() {
 	//arrays to store coordinates
 	pair<int, int> oldCoords[4];
 	pair<int, int> newCoords[4];
-
 	
 	if (CheckRotation(oldCoords, newCoords, 0)) {
 	} else if (CheckRotation(oldCoords, newCoords, 1)) {}
@@ -482,6 +430,7 @@ void ATetrisBoard::RotateInput() {
 	}
 	for (int i = 0; i < 4; i++) {
 		StateGrid[IndexFromCoord(newCoords[i])] = TetrisConstants::TileState::Hovered;
+		HoveringTileCoordinates[i] = newCoords[i];
 	}
 
 	DrawGrid();
@@ -495,22 +444,21 @@ bool ATetrisBoard::CheckRotation(pair<int, int> oldCoords[4], pair<int, int> new
 	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
 	int coordIndex = 0;
 
-	for (int i = 0; i < TetrisConstants::Width; i++) {
-		for (int j = 0; j < TetrisConstants::Height; j++) {
-			if (StateGrid[j * TetrisConstants::Width + i] != TetrisConstants::TileState::Hovered) { continue; }
+	for (int i = 0; i < 4; i++) {
+		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
 
-			//90 degree coordinate rotation around rotation point.
-			int x = rotationCoord.first + (j - rotationCoord.second) + SideMod;
-			int y = rotationCoord.second - (i - rotationCoord.first);
+		//90 degree coordinate rotation around rotation point.
+		int x = rotationCoord.first + (HoveringTileCoordinates[i].second - rotationCoord.second) + SideMod;
+		int y = rotationCoord.second - (HoveringTileCoordinates[i].first - rotationCoord.first);
 
-			if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return false; }
-			if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return false; }
+		if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return false; }
+		if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return false; }
 
-			oldCoords[coordIndex] = std::make_pair(i, j);
-			newCoords[coordIndex] = std::make_pair(x, y);
-			coordIndex++;
-		}
+		oldCoords[coordIndex] = std::make_pair(HoveringTileCoordinates[i].first, HoveringTileCoordinates[i].second);
+		newCoords[coordIndex] = std::make_pair(x, y);
+		coordIndex++;
 	}
+
 	RotationPointIndex += SideMod;
 	return true;
 }
