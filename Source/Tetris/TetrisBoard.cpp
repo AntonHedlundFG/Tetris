@@ -1,5 +1,7 @@
 #include "TetrisBoard.h"
 
+using std::make_pair;
+
 ATetrisBoard::ATetrisBoard()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -225,9 +227,9 @@ int ATetrisBoard::IndexFromCoord(pair<int, int> coordinate) {
 }
 pair<int, int> ATetrisBoard::CoordFromIndex(int index) {
 	if (index < 0 || index >= (TetrisConstants::Width * TetrisConstants::Height)) {
-		return std::make_pair(-1, -1);
+		return make_pair(-1, -1);
 	}
-	return std::make_pair(index % TetrisConstants::Width, index / TetrisConstants::Width);
+	return make_pair(index % TetrisConstants::Width, index / TetrisConstants::Width);
 }
 
 //Updates board visibility from current logical grid
@@ -257,7 +259,6 @@ bool ATetrisBoard::TrySpawnBlock(TetrisConstants::TileType type) {
 	{
 		coordinates[i] = TetrisConstants::TileCoordinates(type)[i];
 	}
-	RotationPointIndex = IndexFromCoord(coordinates[2]);
 	return TrySpawnBlock(coordinates);
 }
 
@@ -309,7 +310,6 @@ bool ATetrisBoard::TryLoweringBlock() {
 		StateGrid[coordinate] = TetrisConstants::TileState::Hovered;
 	}
 
-	RotationPointIndex -= TetrisConstants::Width;
 	DrawGrid();
 	return true;
 }
@@ -317,7 +317,6 @@ void ATetrisBoard::DoLoweringBlock() { TryLoweringBlock(); }
 
 bool ATetrisBoard::TryMovingSideways(bool right) 
 {
-	int modValue = right ? 1 : -1;
 	//Check if each hovered tile can be moved without being blocked by wall or other tiles.
 	for (int i = 0; i < 4; i++) {
 		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
@@ -335,15 +334,12 @@ bool ATetrisBoard::TryMovingSideways(bool right)
 	for (int i = 0; i < 4; i++) {
 		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
 		StateGrid[coordinate] = TetrisConstants::TileState::Empty;
-		HoveringTileCoordinates[i].first += modValue;
+		HoveringTileCoordinates[i].first += (right ? 1 : -1);
 	}
 	for (int i = 0; i < 4; i++) {
 		int coordinate = IndexFromCoord(HoveringTileCoordinates[i]);
 		StateGrid[coordinate] = TetrisConstants::TileState::Hovered;
 	}
-
-
-	RotationPointIndex += modValue;
 
 	DrawGrid();
 	return true;
@@ -357,7 +353,7 @@ void ATetrisBoard::LockHoveringTiles() {
 }
 
 void ATetrisBoard::CheckRowRemoval() {
-	int totalRows = 0;
+	int rowsRemoved = 0;
 	for (int j = TetrisConstants::Height; j >= 0; j--) {
 		bool rowFilled = true;
 		for (int i = 0; i < TetrisConstants::Width; i++) {
@@ -367,10 +363,10 @@ void ATetrisBoard::CheckRowRemoval() {
 		}
 		if (rowFilled) {
 			ClearRow(j);
-			totalRows++;
+			rowsRemoved++;
 		}
 	}
-	AddScore(totalRows);
+	AddScore(rowsRemoved);
 }
 
 void ATetrisBoard::ClearRow(int row) {
@@ -402,8 +398,7 @@ void ATetrisBoard::FastDropInput() {
 void ATetrisBoard::FastDropTimerFunction() {
 	if (TryLoweringBlock()) {
 		GetWorldTimerManager().SetTimer(FastDropTimerHandle, this, &ATetrisBoard::FastDropTimerFunction, 1.0f, false, SecondsPerFastDrop);
-	}
-	else {
+	} else {
 		IsPlaying = true;
 	}
 }
@@ -411,18 +406,14 @@ void ATetrisBoard::FastDropTimerFunction() {
 void ATetrisBoard::RotateInput() {
 	if (!IsPlaying) { return; }
 
-	//Get coordinate for the rotation point.
-	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
-
 	//arrays to store coordinates
 	pair<int, int> oldCoords[4];
 	pair<int, int> newCoords[4];
 	
-	if (CheckRotation(oldCoords, newCoords, 0)) {
-	} else if (CheckRotation(oldCoords, newCoords, 1)) {}
-	else if (!CheckRotation(oldCoords, newCoords, -1)) {
-		return;
-	}
+	if (!CheckRotation(oldCoords, newCoords, 0) 
+		&& !CheckRotation(oldCoords, newCoords, 1)
+		&& !CheckRotation(oldCoords, newCoords, -1))
+		{ return; }
 
 	//If we pass the rotation check above, use the stored coordinates to actually rotate the tile.
 	for (int i = 0; i < 4; i++) {
@@ -441,7 +432,7 @@ bool ATetrisBoard::CheckRotation(pair<int, int> oldCoords[4], pair<int, int> new
 		SideMod = SideMod > 0 ? 1 : -1;
 	}
 
-	pair<int, int> rotationCoord = CoordFromIndex(RotationPointIndex);
+	pair<int, int> rotationCoord = HoveringTileCoordinates[2];
 	int coordIndex = 0;
 
 	for (int i = 0; i < 4; i++) {
@@ -454,12 +445,11 @@ bool ATetrisBoard::CheckRotation(pair<int, int> oldCoords[4], pair<int, int> new
 		if (x < 0 || y < 0 || x >= TetrisConstants::Width || y >= TetrisConstants::Height) { return false; }
 		if (StateGrid[x + y * TetrisConstants::Width] == TetrisConstants::TileState::Filled) { return false; }
 
-		oldCoords[coordIndex] = std::make_pair(HoveringTileCoordinates[i].first, HoveringTileCoordinates[i].second);
-		newCoords[coordIndex] = std::make_pair(x, y);
+		oldCoords[coordIndex] = make_pair(HoveringTileCoordinates[i].first, HoveringTileCoordinates[i].second);
+		newCoords[coordIndex] = make_pair(x, y);
 		coordIndex++;
 	}
 
-	RotationPointIndex += SideMod;
 	return true;
 }
 
@@ -470,22 +460,9 @@ void ATetrisBoard::LoseGame() {
 	IsPlaying = false;
 }
 
-void ATetrisBoard::AddScore(int amount) {
-	switch (amount) {
-		case 0:
-			return;
-		case 1:
-			CurrentScore += 40;
-			break;
-		case 2:
-			CurrentScore += 100;
-			break;
-		case 3:
-			CurrentScore += 300;
-			break;
-		case 4:
-			CurrentScore += 1200;
-			break;
-	}
+void ATetrisBoard::AddScore(int rows) {
+	int addScore = TetrisConstants::Score(rows);
+	if (addScore == 0) { return; }
+	CurrentScore += addScore;
 	OnPointsChanged.Broadcast();
 }

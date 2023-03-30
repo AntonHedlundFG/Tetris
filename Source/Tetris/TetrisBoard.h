@@ -102,6 +102,8 @@ protected:
 	void DoLoweringBlock();
 	bool TryMovingSideways(bool right);
 
+	//Stores the 4 tiles holding the current block. 
+	//index [2] holds the rotation point
 	pair<int, int> HoveringTileCoordinates[4];
 
 	//Turns hovering tiles to filled tiles
@@ -133,7 +135,7 @@ protected:
 	void LoseGame();
 	void ClearBoard();
 
-	//Update score, invokes event
+	// Updates score, invokes event if score changes.
 	void AddScore(int rows);
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
@@ -144,9 +146,6 @@ protected:
 
 	//Is a game active?
 	bool IsPlaying;
-
-	//Index of tile that current TileType should be rotated around
-	int RotationPointIndex = -1;
 
 public:
 	// Sets default values for this pawn's properties
