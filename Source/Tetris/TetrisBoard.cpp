@@ -254,14 +254,8 @@ void ATetrisBoard::DrawGrid() {
 //Spawns a block of the designated type in the spawn position. 
 //If any spawn position blocks are already occupied, returns false. Otherwise, true.
 bool ATetrisBoard::TrySpawnBlock(TetrisConstants::TileType type) {
-	pair<int, int> coordinates[4]; 
-	for (int i = 0; i < 4; i++) 
-	{
-		coordinates[i] = TetrisConstants::TileCoordinates(type)[i];
-	}
-	return TrySpawnBlock(coordinates);
+	return TrySpawnBlock(TetrisConstants::TileCoordinates(type));
 }
-
 bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 	bool ret = true;
 	for (int i = 0; i < 4; i++) {
@@ -274,7 +268,6 @@ bool ATetrisBoard::TrySpawnBlock(pair<int, int> coordinates[]) {
 		}
 		HoveringTileCoordinates[i] = coordinates[i];
 	}
-	
 	NextTile = TetrisConstants::RandomTileType();
 	UpdateUpcomingGrid();
 	return ret;
